@@ -1,0 +1,100 @@
+from random import *
+
+with open("Properties.txt", "r") as f:
+	properties = f.read().splitlines()
+counter = [0 for x in range(40)]
+master_chance = [0, 10, 11, 15, 24, 39, -3]
+for i in range(9): master_chance.append(-1)
+master_chest = [0, 1, 10]
+for i in range(9): master_chest.append(-1)
+
+
+class Player:
+	def __init__(self, start_square):
+		self.square = start_square
+		self.turn = 0
+		self.doubles = 0
+		self.passed_go = 0
+		self.Chance = []
+		self.Chest = []
+
+	def reset(self, square):
+		self.square = square
+		self.turn = 0
+		self.doubles = 0
+		self.passed_go = 0
+		self.Chance = []
+		self.Chest = []
+
+	def chance(self):
+		if len(self.Chance) == 0:
+			self.Chance = master_chance.copy()
+			shuffle(self.Chance)
+		card = self.Chance.pop()
+		if card >= 0:
+			if card == 10:
+				self.square = 10
+			else:
+				if self.square > card:
+					self.passed_go += 1
+				self.square = card
+		if card == -3:
+			self.square -= 3
+		else:
+			pass
+
+	def community(self):
+		if len(self.Chest) == 0:
+			self.Chest = master_chest.copy()
+			shuffle(self.Chest)
+		card = self.Chest.pop()
+		if card >= 0:
+			if card == 0:
+				self.square = 0
+				self.passed_go += 1
+			else:
+				self.square = card
+		else:
+			pass
+
+	def roll_dice(self, n):
+		for j in range(n):
+			self.turn += 1
+			d1, d2 = randint(1, 6), randint(1, 6)
+			if d1 == d2: self.doubles += 1
+			if self.doubles < 3:
+				self.square += (d1 + d2)
+				if self.square == 30:
+					self.square = 10
+					self.doubles = 0
+				elif self.square > 39:
+					self.passed_go += 1
+				self.square %= 40
+				if self.square == 7 or self.square == 22 or self.square == 36:
+					self.chance()
+				if self.square == 2 or self.square == 17 or self.square == 33:
+					self.community()
+			else:
+				self.doubles = 0
+				self.square = 10
+			counter[self.square] += 1
+
+
+def display2file(prop, count, file):
+	file.write("The player rolled the dice {} time(s).\n".format(sum(count)))
+	file.write("The player has played {} games(s).\n".format(games))
+	file.write("Probabilities of landing on a square:\n")
+	for j in range(len(prop)):
+		p = (count[j] / sum(count)) * 100
+		file.write("{} - {:.3f}%\n".format(prop[j], p))
+
+
+starting_square = 0
+games = 1000
+turns = 30
+boot = Player(starting_square)
+for i in range(games):
+	boot.roll_dice(turns)
+	boot.reset(starting_square)
+with open("Probabilities.txt", "w") as f:
+	display2file(properties, counter, f)
